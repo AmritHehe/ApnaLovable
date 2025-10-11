@@ -1,0 +1,25 @@
+{
+  "name": "api",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "build": "tsc",
+    "devf": " bun run src/index.ts --watch",
+    "dev": "bunx tsc -b && node ./dist/index.js"
+  },
+  "lint": "eslint src --ext .ts,.tsx",
+  "format": "prettier --write src",
+  "dependencies": {
+    "@types/express": "^5.0.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
