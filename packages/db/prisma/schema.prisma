@@ -14,3 +14,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User{ 
+  id String @default(cuid()) @unique
+  username String
+  password String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  projects Project[]
+
+}
+model Project{ 
+  id String @default(cuid())@unique
+  title String 
+  initialPrompt String
+  user User @relation(fields: [userId] , references: [id])
+  userId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime 
+  convoHistory ConvoHistory[]
+}
+
+model ConvoHistory{ 
+
+  id String @default(cuid()) @unique
+  project Project @relation(fields: [projectId] , references: [id])
+  projectId String
+  contents String
+  hidden Boolean @default(false)
+  createdAt DateTime @default(now())
+  type String
+  from String
+  toolCall String
+
+}
