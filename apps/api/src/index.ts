@@ -1,5 +1,11 @@
 import express from "express"; 
-
+import Sandbox from "@e2b/code-interpreter";
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { generateText, streamText } from 'ai';
+import { SYSTEM_PROMPT } from "./baseImage";
+import { createFile, updateFile, deleteFile, readFile, runCommand } from "./wrapperTools";
+import { z } from "zod";
+// import { sandbox } from "./e2b"; 
 
 const app = express();
 app.use(express.json()); 
@@ -25,8 +31,46 @@ app.get('api/v1/projects' , (req , res) => {
     
 } )
 app.post('api/v1/projects/convo/:id' , (req , res)=> { 
+
+})
+
+
+app.post("/prompt" , async (req , res) => { 
     
+    const { prompt  } : { prompt : string} = req.body
+    console.log("This is the promt we get " + prompt )
+    const sandbox = await Sandbox.create('wt6mg464dx1jmak12e4t')  
+    const host = sandbox.getHost(5173)
+    console.log(`https://${host}`)
+    const openrouter = createOpenRouter({
+        apiKey: process.env.OPENROUTER_API_KEY,
+      });
+      const response = await generateText({
+        model: openrouter("gpt-4o-mini"),
+        tools: {
+            createFile: createFile(sandbox),
+            updateFile: updateFile(sandbox),
+            deleteFile: deleteFile(sandbox),
+            readFile: readFile(sandbox),
+            runCommand : runCommand(sandbox)
+        } ,
+        messages: [
+            {
+                role: "system",
+                content: SYSTEM_PROMPT
+            },
+            {
+                role: "user",
+                content: prompt
+            }
+        ]
+      });
+      console.log("response "  + response)
+      res.json(response)
+    //   response.pipeTextStreamToResponse(res);
+
 })
 app.listen(3000);
+
 
 
