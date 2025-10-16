@@ -10,7 +10,7 @@ import { z } from "zod";
 const app = express();
 app.use(express.json()); 
 
-
+let PrevContext : any ; 
 
 app.get('api/v1/signup' , (req , res) => { 
     const username = req.body.username; 
@@ -45,6 +45,10 @@ app.post("/prompt" , async (req , res) => {
     const openrouter = createOpenRouter({
         apiKey: process.env.OPENROUTER_API_KEY,
       });
+      const messages = [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: prompt }
+        ];
       const response = await generateText({
         model: openrouter("gpt-4o-mini"),
         tools: {
@@ -65,8 +69,43 @@ app.post("/prompt" , async (req , res) => {
             }
         ]
       });
+    PrevContext = [...messages, { role: "assistant", content: response.text }];
       console.log("response "  + response)
       res.json(response)
+    //   response.pipeTextStreamToResponse(res);
+
+})
+app.put("/prompt" , async (req , res) => { 
+    
+    const { prompt  } : { prompt : string} = req.body
+    const { sandboxID } : { sandboxID : string } = req.body
+    console.log("This is the promt we get " + prompt )
+    
+    const sandbox = await Sandbox.connect(sandboxID)  
+    const host = sandbox.getHost(5173)
+    console.log(`https://${host}`)
+    const openrouter = createOpenRouter({
+        apiKey: process.env.OPENROUTER_API_KEY,
+      }); 
+       const newMessages = [
+            ...PrevContext,
+            { role: "user", content: prompt }
+        ];
+      const response = await generateText({
+        model: openrouter("gpt-4o-mini"),
+        tools: {
+            createFile: createFile(sandbox),
+            updateFile: updateFile(sandbox),
+            deleteFile: deleteFile(sandbox),
+            readFile: readFile(sandbox),
+            runCommand : runCommand(sandbox)
+        } ,
+        messages: newMessages
+      });
+      console.log("response "  + response)
+      res.json(response)
+      PrevContext = [...newMessages, { role: "assistant", content: response.text }];
+
     //   response.pipeTextStreamToResponse(res);
 
 })
