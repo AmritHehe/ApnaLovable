@@ -1,7 +1,7 @@
 import express from "express"; 
 import Sandbox from "@e2b/code-interpreter";
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { convertToModelMessages, generateText, streamText, type ModelMessage } from 'ai';
+import { convertToModelMessages, generateText, stepCountIs, streamText, type ModelMessage } from 'ai';
 import { SYSTEM_PROMPT } from "./baseImage";
 import { createFile, updateFile, deleteFile, readFile, runCommand } from "./wrapperTools";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import { z } from "zod";
 const app = express();
 app.use(express.json()); 
 
-let PrevContext : any ; 
+let PrevContext : ModelMessage[]  = []; 
 
 app.get('api/v1/signup' , (req , res) => { 
     const username = req.body.username; 
@@ -55,6 +55,7 @@ app.post("/prompt" , async (req , res) => {
                 content: prompt
             }
           ]
+          
       const response = await generateText({
         model: openrouter("gpt-4o-mini"),
         tools: {
@@ -64,7 +65,8 @@ app.post("/prompt" , async (req , res) => {
             readFile: readFile(sandbox),
             runCommand : runCommand(sandbox)
         } ,
-        messages : messages
+        messages : messages , 
+        stopWhen : stepCountIs(10)
       });
       PrevContext = [...messages, { role: "assistant", content: response.text}];
       console.log("response "  + response)
@@ -97,7 +99,8 @@ app.put("/prompt" , async (req , res) => {
             readFile: readFile(sandbox),
             runCommand : runCommand(sandbox)
         } ,
-        messages: PrevContext
+        messages: PrevContext , 
+        stopWhen : stepCountIs(10)
       });
       console.log("response "  + response)
       res.json(response)
