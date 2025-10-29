@@ -1,7 +1,7 @@
 import express from "express"; 
 import Sandbox from "@e2b/code-interpreter";
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { generateText, streamText } from 'ai';
+import { convertToModelMessages, generateText, streamText, type ModelMessage } from 'ai';
 import { SYSTEM_PROMPT } from "./baseImage";
 import { createFile, updateFile, deleteFile, readFile, runCommand } from "./wrapperTools";
 import { z } from "zod";
@@ -45,10 +45,16 @@ app.post("/prompt" , async (req , res) => {
     const openrouter = createOpenRouter({
         apiKey: process.env.OPENROUTER_API_KEY,
       });
-      const messages = [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: prompt }
-        ];
+      let messages : ModelMessage[] = [
+             {
+                role: "system",
+                content: SYSTEM_PROMPT
+            },
+            {
+                role: "user",
+                content: prompt
+            }
+          ]
       const response = await generateText({
         model: openrouter("gpt-4o-mini"),
         tools: {
@@ -58,18 +64,9 @@ app.post("/prompt" , async (req , res) => {
             readFile: readFile(sandbox),
             runCommand : runCommand(sandbox)
         } ,
-        messages: [
-            {
-                role: "system",
-                content: SYSTEM_PROMPT
-            },
-            {
-                role: "user",
-                content: prompt
-            }
-        ]
+        messages : messages
       });
-    PrevContext = [...messages, { role: "assistant", content: response.text }];
+      PrevContext = [...messages, { role: "assistant", content: response.text}];
       console.log("response "  + response)
       res.json(response)
     //   response.pipeTextStreamToResponse(res);
@@ -87,7 +84,7 @@ app.put("/prompt" , async (req , res) => {
     const openrouter = createOpenRouter({
         apiKey: process.env.OPENROUTER_API_KEY,
       }); 
-       const newMessages = [
+       PrevContext = [
             ...PrevContext,
             { role: "user", content: prompt }
         ];
@@ -100,11 +97,11 @@ app.put("/prompt" , async (req , res) => {
             readFile: readFile(sandbox),
             runCommand : runCommand(sandbox)
         } ,
-        messages: newMessages
+        messages: PrevContext
       });
       console.log("response "  + response)
       res.json(response)
-      PrevContext = [...newMessages, { role: "assistant", content: response.text }];
+      PrevContext = [...PrevContext, { role: "assistant", content: response.text }];
 
     //   response.pipeTextStreamToResponse(res);
 
