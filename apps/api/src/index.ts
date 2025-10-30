@@ -39,7 +39,9 @@ app.post("/prompt" , async (req , res) => {
     
     const { prompt  } : { prompt : string} = req.body
     console.log("This is the promt we get " + prompt )
-    const sandbox = await Sandbox.create('wt6mg464dx1jmak12e4t')  
+    const sandbox = await Sandbox.betaCreate('wt6mg464dx1jmak12e4t' , { 
+      autoPause : true, 
+    })  
     const host = sandbox.getHost(5173)
     console.log(`https://${host}`)
     const openrouter = createOpenRouter({
@@ -66,7 +68,7 @@ app.post("/prompt" , async (req , res) => {
             runCommand : runCommand(sandbox)
         } ,
         messages : messages , 
-        stopWhen : stepCountIs(10)
+        stopWhen : stepCountIs(20)
       });
       PrevContext = [...messages, { role: "assistant", content: response.text}];
       console.log("response "  + response)
@@ -100,7 +102,7 @@ app.put("/prompt" , async (req , res) => {
             runCommand : runCommand(sandbox)
         } ,
         messages: PrevContext , 
-        stopWhen : stepCountIs(10)
+        stopWhen : stepCountIs(20)
       });
       console.log("response "  + response)
       res.json(response)
