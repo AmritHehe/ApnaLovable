@@ -1,14 +1,16 @@
 import express from "express"; 
 import Sandbox from "@e2b/code-interpreter";
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { convertToModelMessages, generateText, stepCountIs, streamText, type ModelMessage } from 'ai';
+import { convertToModelMessages, generateText, stepCountIs, streamText, type ModelMessage ,  } from 'ai';
 import { SYSTEM_PROMPT } from "./baseImage";
 import { createFile, updateFile, deleteFile, readFile, runCommand } from "./wrapperTools";
+import cors from "cors"
 import { z } from "zod";
 // import { sandbox } from "./e2b"; 
 
 const app = express();
 app.use(express.json()); 
+app.use(cors())
 
 let PrevContext : ModelMessage[]  = []; 
 
@@ -47,7 +49,7 @@ app.post("/prompt" , async (req , res) => {
     const openrouter = createOpenRouter({
         apiKey: process.env.OPENROUTER_API_KEY,
       });
-      let messages : ModelMessage[] = [
+      let context : ModelMessage[] = [
              {
                 role: "system",
                 content: SYSTEM_PROMPT
@@ -58,8 +60,8 @@ app.post("/prompt" , async (req , res) => {
             }
           ]
           
-      const response = await generateText({
-        model: openrouter("gpt-4o-mini"),
+      const result = await generateText({
+        model: openrouter("gpt-4o"),
         tools: {
             createFile: createFile(sandbox),
             updateFile: updateFile(sandbox),
@@ -67,14 +69,20 @@ app.post("/prompt" , async (req , res) => {
             readFile: readFile(sandbox),
             runCommand : runCommand(sandbox)
         } ,
-        messages : messages , 
-        stopWhen : stepCountIs(20)
-      });
-      PrevContext = [...messages, { role: "assistant", content: response.text}];
-      console.log("response "  + response)
-      res.json(response)
-    //   response.pipeTextStreamToResponse(res);
+        messages : context , 
+        stopWhen : stepCountIs(20),
+        temperature : 0.3 , 
+        // maxOutputTokens : 6000 
 
+      });
+      const newMessages = result.response.messages
+      console.log("type of " +  typeof(result))
+      PrevContext = [...context, ...newMessages];
+      console.log(" new messages " + JSON.stringify(newMessages))
+      console.log("response "  + JSON.stringify(context))
+      res.json(`https://${host}`)
+    //   response.pipeTextStreamToResponse(res);
+  
 })
 app.put("/prompt" , async (req , res) => { 
     
@@ -92,8 +100,8 @@ app.put("/prompt" , async (req , res) => {
             ...PrevContext,
             { role: "user", content: prompt }
         ];
-      const response = await generateText({
-        model: openrouter("gpt-4o-mini"),
+      const result = await generateText({
+        model: openrouter("gpt-4o"),
         tools: {
             createFile: createFile(sandbox),
             updateFile: updateFile(sandbox),
@@ -102,16 +110,19 @@ app.put("/prompt" , async (req , res) => {
             runCommand : runCommand(sandbox)
         } ,
         messages: PrevContext , 
-        stopWhen : stepCountIs(20)
+        stopWhen : stepCountIs(20) , 
+        temperature : 0.3 , 
+        // maxOutputTokens : 6000 
       });
-      console.log("response "  + response)
-      res.json(response)
-      PrevContext = [...PrevContext, { role: "assistant", content: response.text }];
+      console.log("response "  + JSON.stringify(result))
+      // res.json(response)
+      res.json(`https://${host}`)
+      const newMessages = result.response.messages
+      PrevContext = [...PrevContext , ...newMessages];
 
     //   response.pipeTextStreamToResponse(res);
 
 })
-app.listen(3000);
-
+app.listen(3001);
 
 
