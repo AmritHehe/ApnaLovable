@@ -1,38 +1,47 @@
-FROM e2bdev/code-interpreter:latest
+# Use Debian-based Node image (required for E2B provisioning)
+FROM node:20-bullseye
 
 # Set working directory
 WORKDIR /home/user
 
-# Install Vite (React + TS template)
+# 1️⃣ Create new Vite + React + TypeScript app
 RUN npm create vite@latest . -- --template react-ts && \
     npm install
 
-# Install TailwindCSS and related dependencies
-RUN npm install -D tailwindcss@3.3.3 postcss@8 autoprefixer@10 && \
-    npx tailwindcss init -p
+# 2️⃣ Install Tailwind CSS v4 and plugin
+RUN npm install tailwindcss @tailwindcss/vite
 
-# Install React Router DOM, shadcn/ui components, and lucide-react
-RUN npm install react-router-dom @shadcn/ui lucide-react
-
-# Basic Tailwind setup: clear App.css & index.css and add Tailwind directives
-RUN echo "@tailwind base;\n@tailwind components;\n@tailwind utilities;" > src/index.css && \
-    echo "/* App CSS - cleared, you can add custom styles here */" > src/App.css
-
-# Create a file that imports all shadcn components (for convenience)
-RUN echo "/* Shadcn/UI imports */\n\
-import { Button, Card, Input, Avatar, Checkbox, Dialog, Tabs, Badge, Switch, Select, Table } from '@shadcn/ui';" \
-> src/shadcnImports.ts
-
-# Create Vite config with React plugin and E2B allowed hosts
+# 3️⃣ Configure Vite with Tailwind + React
 RUN echo "import { defineConfig } from 'vite'; \
 import react from '@vitejs/plugin-react'; \
+import tailwindcss from '@tailwindcss/vite'; \
 export default defineConfig({ \
-  plugins: [react()], \
+  plugins: [react(), tailwindcss()], \
   server: { host: true, allowedHosts: ['.e2b.app'] } \
-});" > vite.config.ts
+});" > vite.config.js
 
-# Expose Vite default port
+# 4️⃣ Add Tailwind imports to index.css
+RUN echo '@import "tailwindcss";' > src/index.css
+
+# 5️⃣ Create Tailwind config manually (v4 syntax)
+RUN echo 'export default { \
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"], \
+  theme: { extend: {} }, \
+  plugins: [] \
+}' > tailwind.config.js
+
+# 6️⃣ Install essential UI + utilities
+RUN npm install lucide-react clsx tailwind-variants class-variance-authority @radix-ui/react-icons @radix-ui/react-slot
+
+# 7️⃣ Install shadcn/ui
+RUN npm install shadcn-ui
+
+# 8️⃣ Install React Router DOM (with types)
+RUN npm install react-router-dom && \
+    npm install -D @types/react-router-dom
+
+# 9️⃣ Expose Vite port
 EXPOSE 5173
 
-# Run the Vite development server
+# 🔟 Start Vite dev server
 CMD ["npm", "run", "dev", "--", "--host"]
